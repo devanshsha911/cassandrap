@@ -1,0 +1,49 @@
+---
+- name: Install Java
+  apt:
+    name: "{{ java_package }}"
+    state: present
+    update_cache: yes
+
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https
+      - curl
+      - gnupg
+    state: present
+
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Cassandra GPG Key
+  shell: |
+    curl -fsSL https://downloads.apache.org/cassandra/KEYS | \
+    gpg --dearmor -o /etc/apt/keyrings/cassandra.gpg
+  args:
+    creates: /etc/apt/keyrings/cassandra.gpg
+
+- name: Add Cassandra Repository
+  copy:
+    dest: /etc/apt/sources.list.d/cassandra.list
+    content: |
+      deb [signed-by=/etc/apt/keyrings/cassandra.gpg] https://debian.cassandra.apache.org 50x main
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install Cassandra
+  apt:
+    name: cassandra
+    state: latest
+    update_cache: yes
+
+- name: Enable Cassandra
+  service:
+    name: cassandra
+    enabled: yes
+    state: started

@@ -1,0 +1,14 @@
+---
+java_package: openjdk-17-jdk
+
+cassandra_version: "50x"
+
+cluster_name: "DevOpsCluster"
+
+listen_address: "auto"
+
+rpc_address: "0.0.0.0"
+
+service_state: started
+
+service_enabled: true
