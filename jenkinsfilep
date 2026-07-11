@@ -65,6 +65,23 @@ pipeline {
             }
         }
 
+        stage('Wait for SSH') {
+            when {
+              expression { params.ACTION == 'CREATE' }
+            }
+            steps {
+                dir('ansible') {
+                    sh '''
+                    until nc -z $(cd ../terraform && terraform output -raw public_ip) 22
+                    do
+                    echo "Waiting for SSH..."
+                    sleep 10
+                    done
+                    '''
+                }
+            }
+        }
+
         stage('Ansible Ping') {
             when {
                expression { params.ACTION == 'CREATE' }
