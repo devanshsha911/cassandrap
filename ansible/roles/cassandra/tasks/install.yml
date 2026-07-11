@@ -20,9 +20,19 @@
     mode: '0755'
 
 - name: Download Cassandra GPG Key
-  shell: |
-    curl -fsSL https://downloads.apache.org/cassandra/KEYS | \
-    gpg --dearmor -o /etc/apt/keyrings/cassandra.gpg
+  get_url:
+    url: https://downloads.apache.org/cassandra/KEYS
+    dest: /tmp/KEYS
+    mode: '0644'
+    timeout: 120
+  register: key_download
+  retries: 5
+  delay: 15
+  until: key_download is succeeded
+
+- name: Convert Cassandra GPG Key
+  command:
+    cmd: gpg --dearmor --yes -o /etc/apt/keyrings/cassandra.gpg /tmp/KEYS
   args:
     creates: /etc/apt/keyrings/cassandra.gpg
 
