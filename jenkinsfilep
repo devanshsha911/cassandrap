@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+       environment {
+            AWS_SHARED_CREDENTIALS_FILE = "/var/lib/jenkins/.aws/credentials"
+            AWS_CONFIG_FILE = "/var/lib/jenkins/.aws/config"
+            }
+
+
     stages {
         stage('Checkout') {
             steps {
