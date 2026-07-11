@@ -1,6 +1,13 @@
 pipeline {
+    parameters {
+    choice(
+        name: 'ACTION',
+        choices: ['CREATE', 'DESTROY'],
+        description: 'Choose Infrastructure Action'
+        )
+     }
     agent any
-
+ 
        environment {
             AWS_SHARED_CREDENTIALS_FILE = "/var/lib/jenkins/.aws/credentials"
             AWS_CONFIG_FILE = "/var/lib/jenkins/.aws/config"
@@ -29,13 +36,66 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Terraform Apply') {
+             when {
+                 expression { params.ACTION == 'CREATE' }
+                 }
+             steps {
+                 dir('terraform') {
+                      sh 'terraform apply -auto-approve'
+                 }
+             }
+         }
+
+        
+                
+
+        stage('Generate Inventory') {
+            when {
+             expression { params.ACTION == 'CREATE' }
+            }
+
             steps {
-                dir('terraform') {
-                    sh 'terraform apply -auto-approve'
+                dir('ansible') {
+                    sh 'chmod +x generate_inventory.sh'
+                    sh './generate_inventory.sh'
+                    sh 'cat inventory'
                 }
             }
+        }
+
+        stage('Ansible Ping') {
+            when {
+               expression { params.ACTION == 'CREATE' }
+            }
+            steps {
+                dir('ansible') {
+                  sh 'ansible -i inventory cassandra -m ping'
+                }
+            }
+        }
+
+        stage('Install Cassandra') {
+            when {
+               expression { params.ACTION == 'CREATE' }
+            }
+            steps {
+                dir('ansible') {
+                  sh 'ansible-playbook -i inventory playbook.yml'
+                }
+            }
+        }
+  
+        stage('Terraform Destroy') {
+           when {
+              expression { params.ACTION == 'DESTROY' }
+           }
+           steps {
+               dir('terraform') {
+                  sh 'terraform destroy -auto-approve'
+               }
+           }
         }
     }
 }
