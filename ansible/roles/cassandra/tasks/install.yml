@@ -57,3 +57,87 @@
     name: cassandra
     enabled: yes
     state: started
+- name: Install Cassandra
+  ansible.builtin.apt:
+    name: cassandra
+    state: present
+    update_cache: true
+
+# ---------------- CQLSH VIRTUAL ENVIRONMENT ----------------
+
+- name: Install repository management package
+  ansible.builtin.apt:
+    name: software-properties-common
+    state: present
+    update_cache: true
+
+- name: Add Python Deadsnakes repository
+  ansible.builtin.apt_repository:
+    repo: ppa:deadsnakes/ppa
+    state: present
+    update_cache: true
+
+- name: Install Python 3.11 packages
+  ansible.builtin.apt:
+    name:
+      - python3.11
+      - python3.11-venv
+      - python3.11-dev
+    state: present
+    update_cache: true
+
+- name: Create cqlsh virtual environment
+  ansible.builtin.command:
+    cmd: python3.11 -m venv /opt/cqlsh-env
+    creates: /opt/cqlsh-env/bin/python
+
+- name: Upgrade pip inside cqlsh virtual environment
+  ansible.builtin.command:
+    cmd: /opt/cqlsh-env/bin/python -m pip install --upgrade pip
+  register: pip_upgrade
+  changed_when: "'Successfully installed' in pip_upgrade.stdout"
+
+- name: Install cqlsh inside virtual environment
+  ansible.builtin.pip:
+    name: cqlsh
+    state: present
+    virtualenv: /opt/cqlsh-env
+    virtualenv_python: python3.11
+
+- name: Create global cqlsh command
+  ansible.builtin.copy:
+    dest: /usr/local/bin/cqlsh
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      exec /opt/cqlsh-env/bin/cqlsh "$@"
+
+# ---------------- CASSANDRA SERVICE ----------------
+
+- name: Enable and start Cassandra
+  ansible.builtin.service:
+    name: cassandra
+    enabled: true
+    state: started
+
+- name: Wait for Cassandra CQL port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 9042
+    delay: 10
+    timeout: 300
+
+- name: Verify cqlsh connection
+  ansible.builtin.command:
+    cmd: /usr/local/bin/cqlsh 127.0.0.1 9042 -e "DESCRIBE CLUSTER"
+  register: cqlsh_result
+  changed_when: false
+  retries: 5
+  delay: 15
+  until: cqlsh_result.rc == 0
+
+- name: Display cqlsh result
+  ansible.builtin.debug:
+    var: cqlsh_result.stdout_lines
