@@ -88,7 +88,10 @@ pipeline {
             }
             steps {
                 dir('ansible') {
-                  sh 'ansible -i inventory cassandra -m ping'
+                  sh '''
+                   ANSIBLE_HOST_KEY_CHECKING=False \
+                  ansible -i inventory cassandra -m ping
+                   '''
                 }
             }
         }
@@ -99,7 +102,10 @@ pipeline {
             }
             steps {
                 dir('ansible') {
-                  sh 'ansible-playbook -i inventory playbook.yml'
+                 sh '''
+                  ANSIBLE_HOST_KEY_CHECKING=False \ 
+                  ansible-playbook -i inventory playbook.yml
+                  '''
                 }
             }
         }
