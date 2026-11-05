@@ -1,1 +1,1 @@
-key_name = "cassandra-key"
+key_name = "jenkins-server"
